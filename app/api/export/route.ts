@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
     Regimen: tardy.students?.regimen === "I" ? "Interno" : "Externo",
     Fecha: tardy.fecha,
     Hora: tardy.hora,
+    Descripcion: tardy.descripcion || "",
   }))
 
   const worksheet = XLSX.utils.json_to_sheet(excelData)
@@ -73,6 +74,7 @@ export async function GET(request: NextRequest) {
     { wch: 12 },
     { wch: 12 },
     { wch: 10 },
+    { wch: 30 },
   ]
 
   const workbook = XLSX.utils.book_new()

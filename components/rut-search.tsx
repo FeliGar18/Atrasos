@@ -22,6 +22,7 @@ interface RutSearchProps {
 
 export function RutSearch({ onTardyRegistered }: RutSearchProps) {
   const [rut, setRut] = useState("")
+  const [descripcion, setDescripcion] = useState("")
   const [student, setStudent] = useState<Student | null>(null)
   const [loading, setLoading] = useState(false)
   const [registering, setRegistering] = useState(false)
@@ -64,7 +65,7 @@ export function RutSearch({ onTardyRegistered }: RutSearchProps) {
       const res = await fetch("/api/tardies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ student_id: student.id }),
+        body: JSON.stringify({ student_id: student.id, descripcion }),
       })
       if (!res.ok) {
         toast.error("Error al registrar atraso")
@@ -84,6 +85,7 @@ export function RutSearch({ onTardyRegistered }: RutSearchProps) {
 
       setStudent(null)
       setRut("")
+      setDescripcion("")
       onTardyRegistered()
       inputRef.current?.focus()
     } catch {
@@ -191,6 +193,19 @@ export function RutSearch({ onTardyRegistered }: RutSearchProps) {
             </p>
           )}
         </div>
+
+        {/* Description */}
+        {student && (
+          <div className="mb-4">
+            <textarea
+              placeholder="Motivo del atraso (opcional)"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              rows={2}
+              className="w-full resize-none rounded-xl border border-border bg-surface2 px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:shadow-[0_0_0_3px_rgba(0,201,167,0.15)]"
+            />
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2">
