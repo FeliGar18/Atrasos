@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getChileToday, getChileStartOfMonth, getChileSemesterStart, getChileTime } from "@/lib/chile-date"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -6,24 +7,17 @@ export async function GET(request: NextRequest) {
   const period = searchParams.get("period") || "today"
 
   const supabase = createAdminClient()
-  const now = new Date()
-  const today = now.toISOString().split("T")[0]
+  const today = getChileToday()
 
   let dateFilter: string
 
   switch (period) {
     case "month": {
-      dateFilter = new Date(now.getFullYear(), now.getMonth(), 1)
-        .toISOString()
-        .split("T")[0]
+      dateFilter = getChileStartOfMonth()
       break
     }
     case "semester": {
-      const month = now.getMonth()
-      dateFilter =
-        month < 7
-          ? new Date(now.getFullYear(), 2, 1).toISOString().split("T")[0]
-          : new Date(now.getFullYear(), 7, 1).toISOString().split("T")[0]
+      dateFilter = getChileSemesterStart()
       break
     }
     default:
@@ -64,17 +58,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Insert new tardy with current date, time, and optional description
+    // Insert new tardy with current Chile date and time
     const insertData: { student_id: number; fecha: string; hora: string; descripcion?: string } = {
       student_id,
-      fecha: new Date().toISOString().split("T")[0],
-      hora: new Date().toLocaleTimeString("es-CL", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-        timeZone: "America/Santiago",
-      }),
+      fecha: getChileToday(),
+      hora: getChileTime(),
     }
 
     if (descripcion && descripcion.trim()) {

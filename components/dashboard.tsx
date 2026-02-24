@@ -73,7 +73,7 @@ export function Dashboard() {
           {/* Left Panel */}
           <div className="flex flex-col gap-5">
             <RutSearch onTardyRegistered={triggerRefresh} />
-            <AdminPanel onDataChanged={triggerRefresh} />
+            <AdminPanel onDataChanged={triggerRefresh} refreshKey={refreshKey} />
           </div>
 
           {/* Right Panel */}

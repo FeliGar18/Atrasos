@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getChileToday, getChileStartOfMonth, getChileSemesterStart, getChileMonth, getChileYear } from "@/lib/chile-date"
 import { NextRequest, NextResponse } from "next/server"
 import * as XLSX from "xlsx"
 
@@ -7,27 +8,29 @@ export async function GET(request: NextRequest) {
   const period = searchParams.get("period") || "today"
 
   const supabase = createAdminClient()
-  const now = new Date()
-  const today = now.toISOString().split("T")[0]
+  const today = getChileToday()
+  const chileMonth = getChileMonth()
+  const chileYear = getChileYear()
 
   let dateFilter: string
   let periodLabel: string
 
   switch (period) {
     case "month": {
-      dateFilter = new Date(now.getFullYear(), now.getMonth(), 1)
-        .toISOString()
-        .split("T")[0]
-      periodLabel = `Mensual_${now.toLocaleDateString("es-CL", { month: "long", year: "numeric" })}`
+      dateFilter = getChileStartOfMonth()
+      const monthNames = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+      periodLabel = `Mensual_${monthNames[chileMonth - 1]}_${chileYear}`
       break
     }
     case "semester": {
-      const month = now.getMonth()
-      dateFilter =
-        month < 7
-          ? new Date(now.getFullYear(), 2, 1).toISOString().split("T")[0]
-          : new Date(now.getFullYear(), 7, 1).toISOString().split("T")[0]
-      periodLabel = `Semestral_${month < 7 ? "1er" : "2do"}_Semestre_${now.getFullYear()}`
+      dateFilter = getChileSemesterStart()
+      const sem = chileMonth >= 3 && chileMonth <= 7 ? "1er" : "2do"
+      periodLabel = `Semestral_${sem}_Semestre_${chileYear}`
+      break
+    }
+    case "complete": {
+      dateFilter = "2000-01-01"
+      periodLabel = `Completo_${today}`
       break
     }
     default:

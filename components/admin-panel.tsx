@@ -1,16 +1,38 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 
 interface AdminPanelProps {
   onDataChanged: () => void
+  refreshKey?: number
 }
 
-export function AdminPanel({ onDataChanged }: AdminPanelProps) {
+export function AdminPanel({ onDataChanged, refreshKey }: AdminPanelProps) {
   const [importing, setImporting] = useState(false)
   const [dbStatus, setDbStatus] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load student count from DB on mount and when refreshKey changes
+  const loadStudentCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/students")
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data) && data.length > 0) {
+          setDbStatus(`${data.length} alumnos en base de datos`)
+        } else {
+          setDbStatus(null)
+        }
+      }
+    } catch {
+      // silent fail
+    }
+  }, [])
+
+  useEffect(() => {
+    loadStudentCount()
+  }, [loadStudentCount, refreshKey])
 
   // Confirm modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -37,8 +59,8 @@ export function AdminPanel({ onDataChanged }: AdminPanelProps) {
         return
       }
       toast.success(data.message)
-      setDbStatus(`${data.count} alumnos cargados`)
       onDataChanged()
+      loadStudentCount()
     } catch {
       toast.error("Error al importar archivo")
     } finally {
@@ -97,7 +119,8 @@ export function AdminPanel({ onDataChanged }: AdminPanelProps) {
         semester: "Semestral",
         all: "Completo",
       }
-      a.download = `Reporte_${labels[type]}_${new Date().toISOString().split("T")[0]}.xlsx`
+      const clDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date())
+      a.download = `Reporte_${labels[type]}_${clDate}.xlsx`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

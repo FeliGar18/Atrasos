@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getChileToday, getChileStartOfMonth, getChileSemesterStart } from "@/lib/chile-date"
 import { NextRequest, NextResponse } from "next/server"
 
 function normalizeRut(raw: string): string {
@@ -38,23 +39,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Also fetch tardy count
-    const today = new Date().toISOString().split("T")[0]
-    const startOfMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1
-    )
-      .toISOString()
-      .split("T")[0]
-
-    // Semester: Mar-Jul = sem1, Aug-Dec = sem2
-    const month = new Date().getMonth() // 0-indexed
-    const year = new Date().getFullYear()
-    const semesterStart =
-      month < 7
-        ? new Date(year, 2, 1).toISOString().split("T")[0] // March 1
-        : new Date(year, 7, 1).toISOString().split("T")[0] // August 1
+    // Also fetch tardy count using Chile timezone
+    const today = getChileToday()
+    const startOfMonth = getChileStartOfMonth()
+    const semesterStart = getChileSemesterStart()
 
     const [todayCount, monthCount, semesterCount, totalCount] =
       await Promise.all([

@@ -22,8 +22,22 @@ export function StatsCards({ today, month, semester, alertCount }: StatsCardsPro
     setMonthLabel(
       now.toLocaleDateString("es-CL", { month: "long", year: "numeric" })
     )
-    const sem = now.getMonth() < 6 ? "1er Semestre" : "2do Semestre"
-    setSemLabel(`${sem} ${now.getFullYear()}`)
+    // Use Chile timezone for semester calculation
+    const clFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", month: "numeric", year: "numeric" })
+    const clParts = clFormatter.formatToParts(now)
+    const clMonth = parseInt(clParts.find(p => p.type === "month")?.value || "1")
+    const clYear = parseInt(clParts.find(p => p.type === "year")?.value || "2026")
+
+    let sem: string
+    if (clMonth >= 3 && clMonth <= 7) {
+      sem = "1er Semestre"
+    } else if (clMonth >= 8 && clMonth <= 12) {
+      sem = "2do Semestre"
+    } else {
+      // Jan/Feb = vacaciones, show 2do sem from prev year
+      sem = "2do Semestre"
+    }
+    setSemLabel(`${sem} ${clMonth <= 2 ? clYear - 1 : clYear}`)
   }, [])
 
   const stats = [
