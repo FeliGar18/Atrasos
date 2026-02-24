@@ -114,15 +114,20 @@ export function AdminPanel({ onDataChanged }: AdminPanelProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importing}
-              className="gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              {importing ? "Importando..." : "Cargar Base de Datos (Excel)"}
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {importing ? "Importando..." : "Cargar Base de Datos (Excel)"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Columnas: Nombre, Apellido, RUT, Regimen
+              </p>
+            </div>
             <input
               ref={fileInputRef}
               type="file"

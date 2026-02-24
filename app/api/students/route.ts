@@ -2,16 +2,19 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { NextRequest, NextResponse } from "next/server"
 
 function normalizeRut(raw: string): string {
-  // Remove dots, dashes, spaces
-  const cleaned = raw.replace(/[.\-\s]/g, "")
-  // If it has a verification digit (last char is digit or k/K after dash or just appended)
-  // RUT format: 12345678-9 or 123456789 or 12.345.678-9
-  // We want just the numeric body without the verification digit
-  // Chilean RUT body is 7-8 digits, verification digit is 1 char
-  if (/^\d{7,8}[\dkK]$/.test(cleaned)) {
-    return cleaned.slice(0, -1)
+  let rut = raw.trim()
+  // If it contains a dash (e.g., "23308081-0"), take only the body before the dash
+  if (rut.includes("-")) {
+    rut = rut.split("-")[0]
   }
-  return cleaned
+  // Remove dots, dashes, spaces
+  rut = rut.replace(/[.\-\s]/g, "")
+  // If the RUT was entered without dash but with verification digit appended (e.g., "233080810")
+  // Chilean RUT body is 7-8 digits; if 9+ chars, strip the last char (verification digit)
+  if (/^\d{9,}$/.test(rut)) {
+    rut = rut.slice(0, -1)
+  }
+  return rut
 }
 
 export async function GET(request: NextRequest) {

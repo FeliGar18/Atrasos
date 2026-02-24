@@ -53,9 +53,17 @@ export async function POST(request: NextRequest) {
           (row["régimen"] as string) ||
           ""
 
-        // Normalize RUT: remove dots, dashes, spaces, and verification digit
-        rut = String(rut).replace(/[.\-\s]/g, "")
-        if (/^\d{7,8}[\dkK]$/.test(rut)) {
+        // Normalize RUT: convert to string first (Excel may send as number)
+        rut = String(rut).trim()
+        // If it contains a dash (e.g., "23308081-0"), split and take the body
+        if (rut.includes("-")) {
+          rut = rut.split("-")[0]
+        }
+        // Remove any remaining dots, dashes, spaces
+        rut = rut.replace(/[.\-\s]/g, "")
+        // If still has a verification digit appended (no dash format like "233080810")
+        // Chilean RUT body is 7-8 digits; if 9+ chars and last is digit/k, strip it
+        if (/^\d{8,9}[\dkK]?$/.test(rut) && rut.length > 8) {
           rut = rut.slice(0, -1)
         }
 
