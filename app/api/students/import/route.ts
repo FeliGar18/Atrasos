@@ -86,21 +86,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Deduplicate by RUT - keep the last occurrence of each RUT
+    const uniqueMap = new Map<string, (typeof students)[0]>()
+    for (const student of students) {
+      uniqueMap.set(student.rut, student)
+    }
+    const uniqueStudents = Array.from(uniqueMap.values())
+
     const supabase = createAdminClient()
 
-    // Upsert students (update if RUT already exists)
-    const { data, error } = await supabase
-      .from("students")
-      .upsert(students, { onConflict: "rut" })
-      .select()
+    // Insert in batches of 100 to avoid payload limits
+    const batchSize = 100
+    let totalImported = 0
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    for (let i = 0; i < uniqueStudents.length; i += batchSize) {
+      const batch = uniqueStudents.slice(i, i + batchSize)
+      const { error } = await supabase
+        .from("students")
+        .upsert(batch, { onConflict: "rut" })
+
+      if (error) {
+        return NextResponse.json(
+          { error: `Error en lote ${Math.floor(i / batchSize) + 1}: ${error.message}` },
+          { status: 500 }
+        )
+      }
+      totalImported += batch.length
     }
 
     return NextResponse.json({
-      message: `Se importaron ${data?.length || students.length} alumnos exitosamente`,
-      count: data?.length || students.length,
+      message: `Se importaron ${totalImported} alumnos exitosamente`,
+      count: totalImported,
     })
   } catch (err) {
     console.error("Import error:", err)

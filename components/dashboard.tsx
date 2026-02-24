@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import useSWR from "swr"
 import { StatsCards } from "@/components/stats-cards"
 import { RutSearch } from "@/components/rut-search"
@@ -12,6 +12,32 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0)
+  const [currentDate, setCurrentDate] = useState("")
+  const [currentTime, setCurrentTime] = useState("")
+
+  useEffect(() => {
+    function updateDateTime() {
+      const now = new Date()
+      setCurrentDate(
+        now.toLocaleDateString("es-CL", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      )
+      setCurrentTime(
+        now.toLocaleTimeString("es-CL", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "America/Santiago",
+        })
+      )
+    }
+    updateDateTime()
+    const interval = setInterval(updateDateTime, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const { data: stats } = useSWR(
     `/api/stats?_=${refreshKey}`,
@@ -42,19 +68,10 @@ export function Dashboard() {
           </div>
           <div className="text-right">
             <p className="text-sm font-medium text-foreground">
-              {new Date().toLocaleDateString("es-CL", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {currentDate || "\u00A0"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {new Date().toLocaleTimeString("es-CL", {
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "America/Santiago",
-              })}
+              {currentTime || "\u00A0"}
             </p>
           </div>
         </div>
