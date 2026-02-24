@@ -1,0 +1,104 @@
+import { createAdminClient } from "@/lib/supabase/admin"
+import { NextRequest, NextResponse } from "next/server"
+import * as XLSX from "xlsx"
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData()
+    const file = formData.get("file") as File
+
+    if (!file) {
+      return NextResponse.json(
+        { error: "No se proporcionó archivo" },
+        { status: 400 }
+      )
+    }
+
+    const buffer = await file.arrayBuffer()
+    const workbook = XLSX.read(buffer, { type: "array" })
+    const sheetName = workbook.SheetNames[0]
+    const sheet = workbook.Sheets[sheetName]
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet)
+
+    if (jsonData.length === 0) {
+      return NextResponse.json(
+        { error: "El archivo está vacío" },
+        { status: 400 }
+      )
+    }
+
+    // Map Excel columns (case-insensitive)
+    const students = jsonData
+      .map((row) => {
+        const nombre =
+          (row["Nombre"] as string) ||
+          (row["nombre"] as string) ||
+          (row["NOMBRE"] as string) ||
+          ""
+        const apellido =
+          (row["Apellido"] as string) ||
+          (row["apellido"] as string) ||
+          (row["APELLIDO"] as string) ||
+          ""
+        let rut =
+          (row["RUT"] as string) ||
+          (row["rut"] as string) ||
+          (row["Rut"] as string) ||
+          ""
+        const regimen =
+          (row["Regimen"] as string) ||
+          (row["regimen"] as string) ||
+          (row["REGIMEN"] as string) ||
+          (row["Régimen"] as string) ||
+          (row["régimen"] as string) ||
+          ""
+
+        // Normalize RUT: remove dots, dashes, spaces, and verification digit
+        rut = String(rut).replace(/[.\-\s]/g, "")
+        if (/^\d{7,8}[\dkK]$/.test(rut)) {
+          rut = rut.slice(0, -1)
+        }
+
+        return {
+          nombre: String(nombre).trim(),
+          apellido: String(apellido).trim(),
+          rut: rut.trim(),
+          regimen: String(regimen).trim().toUpperCase().charAt(0) === "I" ? "I" : "E",
+        }
+      })
+      .filter((s) => s.nombre && s.apellido && s.rut)
+
+    if (students.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "No se encontraron datos válidos. Verifique que el archivo tenga columnas: Nombre, Apellido, RUT, Regimen",
+        },
+        { status: 400 }
+      )
+    }
+
+    const supabase = createAdminClient()
+
+    // Upsert students (update if RUT already exists)
+    const { data, error } = await supabase
+      .from("students")
+      .upsert(students, { onConflict: "rut" })
+      .select()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      message: `Se importaron ${data?.length || students.length} alumnos exitosamente`,
+      count: data?.length || students.length,
+    })
+  } catch (err) {
+    console.error("Import error:", err)
+    return NextResponse.json(
+      { error: "Error al procesar el archivo" },
+      { status: 500 }
+    )
+  }
+}
