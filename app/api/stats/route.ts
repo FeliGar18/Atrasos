@@ -1,19 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getChileToday, getChileStartOfMonth, getChileSemesterStart } from "@/lib/chile-date"
 import { NextResponse } from "next/server"
 
 export async function GET() {
   const supabase = createAdminClient()
-  const now = new Date()
-  const today = now.toISOString().split("T")[0]
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0]
-  const month = now.getMonth()
-  const year = now.getFullYear()
-  const semesterStart =
-    month < 7
-      ? new Date(year, 2, 1).toISOString().split("T")[0]
-      : new Date(year, 7, 1).toISOString().split("T")[0]
+  const today = getChileToday()
+  const startOfMonth = getChileStartOfMonth()
+  const semesterStart = getChileSemesterStart()
 
   const [todayCount, monthCount, semesterCount, totalStudents, allTardies] =
     await Promise.all([

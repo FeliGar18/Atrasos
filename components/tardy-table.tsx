@@ -9,6 +9,7 @@ interface TardyRecord {
   student_id: number
   fecha: string
   hora: string
+  descripcion?: string
   created_at: string
 }
 
@@ -62,6 +63,7 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
         student_id: t.student_id,
         fecha: t.fecha,
         hora: t.hora,
+        descripcion: t.descripcion,
         created_at: t.created_at,
       })
     }
@@ -307,6 +309,9 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
                     </td>
                     <td className="px-4 py-3 font-mono text-sm text-foreground">
                       {tardy.fecha}
+                    </td>
+                    <td className="max-w-[200px] truncate px-4 py-3 text-sm text-muted-foreground" title={tardy.descripcion || ""}>
+                      {tardy.descripcion || "---"}
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-muted-foreground">
                       {tardy.hora}
