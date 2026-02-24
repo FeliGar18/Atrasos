@@ -1,22 +1,5 @@
 "use client"
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  ClipboardList,
-  Download,
-  AlertTriangle,
-} from "lucide-react"
 import { useState } from "react"
 import useSWR from "swr"
 
@@ -42,6 +25,7 @@ interface TardyTableProps {
 
 export function TardyTable({ refreshKey }: TardyTableProps) {
   const [period, setPeriod] = useState("today")
+  const [filterText, setFilterText] = useState("")
 
   const { data: tardies, isLoading } = useSWR<TardyRecord[]>(
     `/api/tardies?period=${period}&_=${refreshKey}`,
@@ -49,14 +33,20 @@ export function TardyTable({ refreshKey }: TardyTableProps) {
     { refreshInterval: 10000 }
   )
 
-  // Count tardies per student for alert
+  // Group by student for counting
   const studentTardyCounts: Record<number, number> = {}
-  if (tardies && Array.isArray(tardies)) {
-    tardies.forEach((t) => {
-      studentTardyCounts[t.student_id] =
-        (studentTardyCounts[t.student_id] || 0) + 1
-    })
-  }
+  const records = Array.isArray(tardies) ? tardies : []
+  records.forEach((t) => {
+    studentTardyCounts[t.student_id] = (studentTardyCounts[t.student_id] || 0) + 1
+  })
+
+  // Filter by text
+  const filtered = records.filter((t) => {
+    if (!filterText) return true
+    const search = filterText.toLowerCase()
+    const fullName = `${t.students?.nombre} ${t.students?.apellido}`.toLowerCase()
+    return fullName.includes(search) || t.students?.rut?.includes(search)
+  })
 
   const handleExport = async () => {
     try {
@@ -66,12 +56,8 @@ export function TardyTable({ refreshKey }: TardyTableProps) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      const periodLabels: Record<string, string> = {
-        today: "Diario",
-        month: "Mensual",
-        semester: "Semestral",
-      }
-      a.download = `Reporte_Atrasos_${periodLabels[period]}_${new Date().toISOString().split("T")[0]}.xlsx`
+      const labels: Record<string, string> = { today: "Diario", month: "Mensual", semester: "Semestral" }
+      a.download = `Reporte_Atrasos_${labels[period]}_${new Date().toISOString().split("T")[0]}.xlsx`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -81,118 +67,131 @@ export function TardyTable({ refreshKey }: TardyTableProps) {
     }
   }
 
-  const records = Array.isArray(tardies) ? tardies : []
-
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <ClipboardList className="h-5 w-5 text-primary" />
-            Registro de Atrasos
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Tabs
-              value={period}
-              onValueChange={setPeriod}
-              className="w-auto"
-            >
-              <TabsList>
-                <TabsTrigger value="today">Hoy</TabsTrigger>
-                <TabsTrigger value="month">Mes</TabsTrigger>
-                <TabsTrigger value="semester">Semestre</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExport}
-              className="gap-1"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Excel</span>
-            </Button>
-          </div>
+    <div className="card-glow flex flex-1 flex-col rounded-2xl border border-border bg-card p-6 transition-shadow">
+      <div className="card-title-bar mb-4 flex items-center gap-2 text-[0.75rem] font-semibold uppercase tracking-wider text-muted-foreground">
+        Registro de Atrasos
+      </div>
+
+      {/* Filter Row */}
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <input
+          type="text"
+          placeholder="Buscar por nombre o RUT..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          className="min-w-0 flex-1 rounded-lg border border-border bg-surface2 px-3.5 py-2.5 font-sans text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
+        />
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+          className="rounded-lg border border-border bg-surface2 px-3.5 py-2.5 font-sans text-sm text-foreground outline-none focus:border-primary"
+        >
+          <option value="today">Hoy</option>
+          <option value="month">Este mes</option>
+          <option value="semester">Semestre</option>
+        </select>
+        {/* Export Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <button onClick={handleExport} className="flex items-center gap-1.5 rounded-lg border border-border bg-surface2 px-3 py-2.5 text-xs font-semibold text-foreground transition-all hover:border-primary hover:text-primary">
+            {"📥"} Exportar
+          </button>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+
+      {/* Table */}
+      <div className="max-h-[460px] overflow-y-auto rounded-lg">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-        ) : records.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <ClipboardList className="mb-2 h-10 w-10 opacity-40" />
-            <p className="text-sm">No hay atrasos registrados en este periodo</p>
+        ) : filtered.length === 0 ? (
+          <div className="py-12 text-center text-muted-foreground">
+            <p className="mb-3 text-4xl">{"📋"}</p>
+            <p className="text-sm">
+              {records.length === 0
+                ? "Sin registros de atrasos"
+                : "Sin resultados para los filtros seleccionados"}
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">#</TableHead>
-                  <TableHead className="font-semibold">Nombre</TableHead>
-                  <TableHead className="font-semibold">Apellido</TableHead>
-                  <TableHead className="font-semibold">RUT</TableHead>
-                  <TableHead className="font-semibold">Regimen</TableHead>
-                  <TableHead className="font-semibold">Fecha</TableHead>
-                  <TableHead className="font-semibold">Hora</TableHead>
-                  <TableHead className="font-semibold">Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {records.map((tardy, index) => (
-                  <TableRow key={tardy.id}>
-                    <TableCell className="text-muted-foreground">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {tardy.students?.nombre}
-                    </TableCell>
-                    <TableCell>{tardy.students?.apellido}</TableCell>
-                    <TableCell className="font-mono text-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Alumno
+                </th>
+                <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                  RUT
+                </th>
+                <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Regimen
+                </th>
+                <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Atrasos
+                </th>
+                <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Fecha / Hora
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((tardy) => {
+                const count = studentTardyCounts[tardy.student_id] || 0
+                const countClass =
+                  count >= 3
+                    ? "bg-destructive/20 text-destructive animate-pulse-danger"
+                    : count >= 2
+                      ? "bg-warning/15 text-warning"
+                      : "bg-success/15 text-success"
+
+                return (
+                  <tr
+                    key={tardy.id}
+                    className="border-b border-border/50 transition-colors hover:bg-white/[0.02]"
+                  >
+                    <td className="px-4 py-3 font-semibold text-foreground">
+                      {tardy.students?.nombre} {tardy.students?.apellido}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {tardy.students?.rut}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide ${
                           tardy.students?.regimen === "I"
-                            ? "default"
-                            : "secondary"
-                        }
+                            ? "border-internal/30 bg-internal/15 text-internal"
+                            : "border-external/30 bg-external/15 text-external"
+                        }`}
                       >
-                        {tardy.students?.regimen === "I"
-                          ? "Interno"
-                          : "Externo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{tardy.fecha}</TableCell>
-                    <TableCell>{tardy.hora}</TableCell>
-                    <TableCell>
-                      {studentTardyCounts[tardy.student_id] >= 3 ? (
-                        <Badge
-                          variant="destructive"
-                          className="gap-1 bg-destructive text-destructive-foreground"
-                        >
-                          <AlertTriangle className="h-3 w-3" />
-                          Reiterativo
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">Registrado</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                        {tardy.students?.regimen === "I" ? "Interno" : "Externo"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-lg font-mono text-sm font-bold ${countClass}`}
+                      >
+                        {count}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-md bg-surface2 px-2 py-0.5 font-mono text-xs text-muted-foreground">
+                        {tardy.fecha} {tardy.hora}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         )}
-        {records.length > 0 && (
-          <p className="mt-3 text-right text-sm text-muted-foreground">
-            Total: {records.length} atraso{records.length !== 1 ? "s" : ""}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {filtered.length > 0 && (
+        <p className="mt-3 text-right text-xs text-muted-foreground">
+          Total: {filtered.length} registro{filtered.length !== 1 ? "s" : ""}
+        </p>
+      )}
+    </div>
   )
 }

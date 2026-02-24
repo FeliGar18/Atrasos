@@ -6,36 +6,21 @@ import { StatsCards } from "@/components/stats-cards"
 import { RutSearch } from "@/components/rut-search"
 import { TardyTable } from "@/components/tardy-table"
 import { AdminPanel } from "@/components/admin-panel"
-import { Clock } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0)
-  const [currentDate, setCurrentDate] = useState("")
   const [currentTime, setCurrentTime] = useState("")
 
   useEffect(() => {
-    function updateDateTime() {
-      const now = new Date()
-      setCurrentDate(
-        now.toLocaleDateString("es-CL", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      )
+    function tick() {
       setCurrentTime(
-        now.toLocaleTimeString("es-CL", {
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "America/Santiago",
-        })
+        new Date().toLocaleTimeString("es-CL", { timeZone: "America/Santiago" })
       )
     }
-    updateDateTime()
-    const interval = setInterval(updateDateTime, 30000)
+    tick()
+    const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
   }, [])
 
@@ -45,58 +30,58 @@ export function Dashboard() {
     { refreshInterval: 15000 }
   )
 
-  const triggerRefresh = () => {
-    setRefreshKey((k) => k + 1)
-  }
+  const triggerRefresh = () => setRefreshKey((k) => k + 1)
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b bg-card shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Clock className="h-5 w-5" />
+    <div className="min-h-screen bg-background" style={{
+      backgroundImage: "radial-gradient(ellipse at 10% 20%, rgba(0,201,167,0.05) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(0,180,216,0.05) 0%, transparent 50%)"
+    }}>
+      {/* HEADER */}
+      <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-sm" style={{ boxShadow: "0 4px 30px rgba(0,0,0,0.4)" }}>
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-xl text-primary-foreground" style={{ boxShadow: "0 0 20px rgba(0,201,167,0.3)" }}>
+              {"⏱"}
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-foreground">
                 Control de Atrasos
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <span className="text-[0.7rem] font-normal uppercase tracking-widest text-muted-foreground">
                 Sistema de registro y seguimiento
-              </p>
+              </span>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-foreground">
-              {currentDate || "\u00A0"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {currentTime || "\u00A0"}
-            </p>
+          <div className="rounded-lg border border-primary/20 bg-primary/[0.08] px-4 py-2 font-mono text-lg tracking-wider text-primary">
+            {currentTime || "--:--:--"}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
+      {/* MAIN CONTENT */}
+      <main className="mx-auto max-w-[1400px] px-6 py-7">
+        {/* Stats Bar - Full width */}
         <StatsCards
           today={stats?.today ?? 0}
           month={stats?.month ?? 0}
           semester={stats?.semester ?? 0}
-          totalStudents={stats?.totalStudents ?? 0}
+          alertCount={stats?.alertCount ?? 0}
         />
 
-        <RutSearch onTardyRegistered={triggerRefresh} />
+        {/* Two Column Layout */}
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
+          {/* Left Panel */}
+          <div className="flex flex-col gap-5">
+            <RutSearch onTardyRegistered={triggerRefresh} />
+            <AdminPanel onDataChanged={triggerRefresh} />
+          </div>
 
-        <TardyTable refreshKey={refreshKey} />
-
-        <AdminPanel onDataChanged={triggerRefresh} />
+          {/* Right Panel */}
+          <div className="flex flex-col gap-5">
+            <TardyTable refreshKey={refreshKey} />
+          </div>
+        </div>
       </main>
-
-      <footer className="border-t bg-card py-4">
-        <p className="text-center text-xs text-muted-foreground">
-          Sistema de Control de Atrasos &mdash; Uso exclusivo del establecimiento
-        </p>
-      </footer>
     </div>
   )
 }

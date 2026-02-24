@@ -1,70 +1,79 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Clock, CalendarDays, GraduationCap, Users } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface StatsCardsProps {
   today: number
   month: number
   semester: number
-  totalStudents: number
+  alertCount: number
 }
 
-export function StatsCards({
-  today,
-  month,
-  semester,
-  totalStudents,
-}: StatsCardsProps) {
+export function StatsCards({ today, month, semester, alertCount }: StatsCardsProps) {
+  const [dateLabel, setDateLabel] = useState("")
+  const [monthLabel, setMonthLabel] = useState("")
+  const [semLabel, setSemLabel] = useState("")
+
+  useEffect(() => {
+    const now = new Date()
+    setDateLabel(
+      now.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "short" })
+    )
+    setMonthLabel(
+      now.toLocaleDateString("es-CL", { month: "long", year: "numeric" })
+    )
+    const sem = now.getMonth() < 6 ? "1er Semestre" : "2do Semestre"
+    setSemLabel(`${sem} ${now.getFullYear()}`)
+  }, [])
+
   const stats = [
     {
       label: "Atrasos Hoy",
       value: today,
-      icon: Clock,
-      color: "bg-primary text-primary-foreground",
-      iconColor: "text-primary-foreground/80",
+      sub: dateLabel,
+      color: "#00c9a7",
     },
     {
-      label: "Atrasos este Mes",
+      label: "Este Mes",
       value: month,
-      icon: CalendarDays,
-      color: "bg-accent text-accent-foreground",
-      iconColor: "text-accent-foreground/80",
+      sub: monthLabel,
+      color: "#ffd166",
     },
     {
-      label: "Atrasos Semestre",
+      label: "Semestre Actual",
       value: semester,
-      icon: GraduationCap,
-      color: "bg-warning text-warning-foreground",
-      iconColor: "text-warning-foreground/80",
+      sub: semLabel,
+      color: "#00b4d8",
     },
     {
-      label: "Alumnos Registrados",
-      value: totalStudents,
-      icon: Users,
-      color: "bg-secondary text-secondary-foreground",
-      iconColor: "text-secondary-foreground/80",
+      label: "Con Alerta (3+)",
+      value: alertCount,
+      sub: "Alumnos a contactar",
+      color: "#ff4757",
     },
   ]
 
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {stats.map((stat) => (
-        <Card key={stat.label} className={`${stat.color} border-0 py-4`}>
-          <CardContent className="flex items-center gap-3">
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-black/10 ${stat.iconColor}`}
-            >
-              <stat.icon className="h-6 w-6" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-3xl font-bold leading-none">{stat.value}</p>
-              <p className="mt-1 text-xs font-medium opacity-80">
-                {stat.label}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div
+          key={stat.label}
+          className="stat-accent-line relative overflow-hidden rounded-[14px] border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)]"
+          style={{ "--stat-accent": stat.color } as React.CSSProperties}
+        >
+          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+            {stat.label}
+          </p>
+          <p
+            className={`mt-2 font-mono text-4xl font-extrabold leading-none ${stat.color === "#ff4757" && stat.value > 0 ? "animate-pulse-danger" : ""}`}
+            style={{ color: stat.color }}
+          >
+            {stat.value}
+          </p>
+          <p className="mt-1.5 text-[0.72rem] text-muted-foreground">
+            {stat.sub || "\u00A0"}
+          </p>
+        </div>
       ))}
     </div>
   )

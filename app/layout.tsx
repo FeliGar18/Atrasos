@@ -1,33 +1,20 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
+import { Sora, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _sora = Sora({ subsets: ["latin"], weight: ["300", "400", "600", "700", "800"] })
+const _jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "600"] })
 
 export const metadata: Metadata = {
   title: 'Control de Atrasos',
   description: 'Sistema de control de atrasos para establecimientos educacionales',
   generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#0a0e1a',
 }
 
 export default function RootLayout({
@@ -39,7 +26,17 @@ export default function RootLayout({
     <html lang="es">
       <body className="font-sans antialiased">
         {children}
-        <Toaster richColors position="top-right" />
+        <Toaster
+          richColors
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: '#111827',
+              border: '1px solid #1e2d45',
+              color: '#e8edf5',
+            },
+          }}
+        />
         <Analytics />
       </body>
     </html>

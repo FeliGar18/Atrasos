@@ -1,24 +1,6 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Settings,
-  Trash2,
-  DatabaseZap,
-  Upload,
-  AlertTriangle,
-} from "lucide-react"
 import { toast } from "sonner"
 
 interface AdminPanelProps {
@@ -26,43 +8,73 @@ interface AdminPanelProps {
 }
 
 export function AdminPanel({ onDataChanged }: AdminPanelProps) {
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean
-    type: "tardies" | "students"
-    confirmWord: string
-  }>({ open: false, type: "tardies", confirmWord: "" })
-  const [confirmInput, setConfirmInput] = useState("")
-  const [processing, setProcessing] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [dbStatus, setDbStatus] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean
+    title: string
+    message: string
+    keyword: string
+    action: () => Promise<void>
+  } | null>(null)
+  const [confirmInput, setConfirmInput] = useState("")
+  const [processing, setProcessing] = useState(false)
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch("/api/students/import", { method: "POST", body: formData })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || "Error al importar archivo")
+        return
+      }
+      toast.success(data.message)
+      setDbStatus(`${data.count} alumnos cargados`)
+      onDataChanged()
+    } catch {
+      toast.error("Error al importar archivo")
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
   const openConfirm = (type: "tardies" | "students") => {
-    setConfirmDialog({
+    const isLates = type === "tardies"
+    setConfirmModal({
       open: true,
-      type,
-      confirmWord: "Limpiar",
+      title: isLates ? "Limpiar Atrasos" : "Quitar Base de Datos",
+      message: isLates
+        ? "Esta accion eliminara <strong>TODOS los registros de atrasos</strong> de forma permanente."
+        : "Esta accion eliminara <strong>TODA la base de datos de alumnos</strong> de forma permanente.",
+      keyword: "Limpiar",
+      action: async () => {
+        const url = isLates ? "/api/tardies" : "/api/students"
+        const res = await fetch(url, { method: "DELETE" })
+        if (!res.ok) throw new Error()
+        const data = await res.json()
+        toast.success(data.message)
+        if (!isLates) setDbStatus(null)
+        onDataChanged()
+      },
     })
     setConfirmInput("")
   }
 
-  const handleConfirm = async () => {
-    if (confirmInput !== "Limpiar") {
-      toast.error('Debe escribir "Limpiar" exactamente para confirmar')
-      return
-    }
-
+  const handleConfirmAction = async () => {
+    if (!confirmModal || confirmInput !== confirmModal.keyword) return
     setProcessing(true)
     try {
-      const url =
-        confirmDialog.type === "tardies" ? "/api/tardies" : "/api/students"
-      const res = await fetch(url, { method: "DELETE" })
-
-      if (!res.ok) throw new Error()
-
-      const data = await res.json()
-      toast.success(data.message)
-      setConfirmDialog({ open: false, type: "tardies", confirmWord: "" })
-      onDataChanged()
+      await confirmModal.action()
+      setConfirmModal(null)
     } catch {
       toast.error("Error al realizar la operacion")
     } finally {
@@ -70,149 +82,165 @@ export function AdminPanel({ onDataChanged }: AdminPanelProps) {
     }
   }
 
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setImporting(true)
+  // Export buttons
+  const exportReport = async (type: string) => {
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const res = await fetch("/api/students/import", {
-        method: "POST",
-        body: formData,
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        toast.error(data.error || "Error al importar archivo")
-        return
+      const res = await fetch(`/api/export?period=${type}`)
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      const labels: Record<string, string> = {
+        today: "Diario",
+        month: "Mensual",
+        semester: "Semestral",
+        all: "Completo",
       }
-
-      toast.success(data.message)
-      onDataChanged()
+      a.download = `Reporte_${labels[type]}_${new Date().toISOString().split("T")[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success(`Exportado: Reporte ${labels[type]}`)
     } catch {
-      toast.error("Error al importar archivo")
-    } finally {
-      setImporting(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
-      }
+      toast.error("Error al exportar")
     }
   }
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Settings className="h-5 w-5 text-primary" />
-            Administracion
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            <div className="flex flex-col gap-1">
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={importing}
-                className="gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                {importing ? "Importando..." : "Cargar Base de Datos (Excel)"}
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Columnas: Nombre, Apellido, RUT, Regimen
-              </p>
+      {/* Upload DB Card */}
+      <div className="card-glow rounded-2xl border border-border bg-card p-6 transition-shadow">
+        <div className="card-title-bar mb-5 flex items-center gap-2 text-[0.75rem] font-semibold uppercase tracking-wider text-muted-foreground">
+          Base de Datos Alumnos
+        </div>
+
+        <label
+          htmlFor="file-upload"
+          className="upload-area block"
+        >
+          <input
+            ref={fileInputRef}
+            id="file-upload"
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileImport}
+            className="hidden"
+          />
+          <p className="mb-2 text-3xl">{"📂"}</p>
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-primary">
+              {importing ? "Importando..." : "Cargar Excel / CSV"}
+            </strong>
+            <br />
+            Columnas: Nombre, Apellido, RUT, Regimen
+          </p>
+        </label>
+
+        <p className="mt-2.5 text-center text-xs">
+          {dbStatus ? (
+            <span className="text-success">{dbStatus}</span>
+          ) : (
+            <span className="text-muted-foreground">Sin base de datos cargada</span>
+          )}
+        </p>
+      </div>
+
+      {/* Export Reports Card */}
+      <div className="card-glow rounded-2xl border border-border bg-card p-6 transition-shadow">
+        <div className="card-title-bar mb-5 flex items-center gap-2 text-[0.75rem] font-semibold uppercase tracking-wider text-muted-foreground">
+          Exportar Reportes
+        </div>
+        <div className="flex flex-wrap gap-2.5">
+          {[
+            { label: "Diario", key: "today", icon: "📅" },
+            { label: "Mensual", key: "month", icon: "📆" },
+            { label: "Semestral", key: "semester", icon: "📊" },
+            { label: "Completo", key: "all", icon: "📋" },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => exportReport(item.key)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface2 px-4 py-2.5 text-sm font-semibold text-foreground transition-all hover:border-primary hover:text-primary"
+            >
+              {item.icon} {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Admin Card */}
+      <div className="card-glow rounded-2xl border border-border bg-card p-6 transition-shadow">
+        <div className="card-title-bar mb-5 flex items-center gap-2 text-[0.75rem] font-semibold uppercase tracking-wider text-muted-foreground">
+          Administracion
+        </div>
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={() => openConfirm("tardies")}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-destructive/30 bg-surface2 px-4 py-2.5 text-sm font-semibold text-destructive transition-all hover:bg-destructive/10"
+          >
+            {"🗑"} Limpiar Atrasos
+          </button>
+          <button
+            onClick={() => openConfirm("students")}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-destructive/30 bg-surface2 px-4 py-2.5 text-sm font-semibold text-destructive transition-all hover:bg-destructive/10"
+          >
+            {"🗃"} Quitar BD
+          </button>
+        </div>
+      </div>
+
+      {/* Confirm Modal */}
+      {confirmModal?.open && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfirmModal(null)
+          }}
+        >
+          <div className="animate-modal-in w-[90%] max-w-[420px] rounded-2xl border border-destructive/50 bg-[#1a1a2e] p-8 shadow-[0_0_40px_rgba(255,71,87,0.2)]">
+            <h3 className="mb-3 text-lg font-bold text-destructive">
+              {confirmModal.title}
+            </h3>
+            <p
+              className="mb-5 text-sm leading-relaxed text-[#b0b0c8]"
+              dangerouslySetInnerHTML={{ __html: confirmModal.message }}
+            />
+            <div className="mb-5 rounded-lg border border-destructive/20 bg-destructive/[0.08] p-3 text-sm text-[#b0b0c8]">
+              Para confirmar, escribe{" "}
+              <strong className="font-mono text-destructive">{confirmModal.keyword}</strong>{" "}
+              en el campo de abajo:
             </div>
             <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileImport}
-              className="hidden"
-              aria-label="Seleccionar archivo Excel"
-            />
-
-            <Button
-              variant="outline"
-              onClick={() => openConfirm("tardies")}
-              className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="h-4 w-4" />
-              Limpiar Atrasos
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => openConfirm("students")}
-              className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
-            >
-              <DatabaseZap className="h-4 w-4" />
-              Quitar Base de Datos
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Dialog
-        open={confirmDialog.open}
-        onOpenChange={(open) =>
-          setConfirmDialog((prev) => ({ ...prev, open }))
-        }
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Confirmar Accion
-            </DialogTitle>
-            <DialogDescription>
-              {confirmDialog.type === "tardies"
-                ? "Esta a punto de eliminar TODOS los registros de atrasos. Esta accion no se puede deshacer."
-                : "Esta a punto de eliminar TODA la base de datos de alumnos y sus atrasos. Esta accion no se puede deshacer."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-2 py-4">
-            <p className="text-sm font-medium text-foreground">
-              Escriba{" "}
-              <span className="rounded bg-destructive/10 px-2 py-0.5 font-mono font-bold text-destructive">
-                Limpiar
-              </span>{" "}
-              para confirmar:
-            </p>
-            <Input
+              type="text"
+              placeholder={`Escribe ${confirmModal.keyword} para confirmar`}
               value={confirmInput}
               onChange={(e) => setConfirmInput(e.target.value)}
-              placeholder='Escriba "Limpiar" aqui'
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleConfirm()
+                if (e.key === "Enter") handleConfirmAction()
               }}
+              autoFocus
+              className="mb-4 w-full rounded-lg border border-destructive/30 bg-[#0d0d1a] px-3.5 py-2.5 font-mono text-sm text-white outline-none"
             />
+            <div className="flex justify-end gap-2.5">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="rounded-lg border border-white/15 bg-transparent px-5 py-2.5 text-sm text-[#b0b0c8] transition-colors hover:bg-white/5"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                disabled={confirmInput !== confirmModal.keyword || processing}
+                className="rounded-lg bg-destructive px-5 py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-40"
+              >
+                {processing ? "Procesando..." : "Confirmar"}
+              </button>
+            </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() =>
-                setConfirmDialog((prev) => ({ ...prev, open: false }))
-              }
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirm}
-              disabled={confirmInput !== "Limpiar" || processing}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {processing ? "Procesando..." : "Confirmar Eliminacion"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </>
   )
 }
