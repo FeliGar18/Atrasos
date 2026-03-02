@@ -157,7 +157,7 @@ export function AdminPanel({ onDataChanged, refreshKey }: AdminPanelProps) {
               {importing ? "Importando..." : "Cargar Excel / CSV"}
             </strong>
             <br />
-            Columnas: Nombre, Apellido, RUT, Regimen
+            Columnas: Nombre, Apellido, RUT, Regimen, Curso
           </p>
         </label>
 
