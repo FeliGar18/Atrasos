@@ -19,6 +19,7 @@ interface StudentWithTardies {
   apellido: string
   rut: string
   regimen: string
+  curso?: string
   tardies: TardyRecord[]
 }
 
@@ -37,7 +38,7 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const { data: rawTardies, isLoading } = useSWR<
-    Array<TardyRecord & { students: { id: number; nombre: string; apellido: string; rut: string; regimen: string } }>
+    Array<TardyRecord & { students: { id: number; nombre: string; apellido: string; rut: string; regimen: string; curso?: string } }>
   >(`/api/tardies?period=${filterPeriod}&_=${refreshKey}`, fetcher, { refreshInterval: 10000 })
 
   // Group tardies by student
@@ -55,6 +56,7 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
           apellido: t.students.apellido,
           rut: t.students.rut,
           regimen: t.students.regimen,
+          curso: t.students.curso,
           tardies: [],
         })
       }
@@ -178,6 +180,9 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
                     Alumno
                   </th>
                   <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Curso
+                  </th>
+                  <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
                     RUT
                   </th>
                   <th className="sticky top-0 bg-surface2 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -214,6 +219,9 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
                     >
                       <td className="px-4 py-3 font-semibold text-foreground">
                         {student.nombre} {student.apellido}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {student.curso || "---"}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                         {student.rut}

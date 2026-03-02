@@ -52,6 +52,11 @@ export async function POST(request: NextRequest) {
           (row["Régimen"] as string) ||
           (row["régimen"] as string) ||
           ""
+        const curso =
+          (row["Curso"] as string) ||
+          (row["curso"] as string) ||
+          (row["CURSO"] as string) ||
+          ""
 
         // Normalize RUT: convert to string first (Excel may send as number)
         rut = String(rut).trim()
@@ -72,6 +77,7 @@ export async function POST(request: NextRequest) {
           apellido: String(apellido).trim(),
           rut: rut.trim(),
           regimen: String(regimen).trim().toUpperCase().charAt(0) === "I" ? "I" : "E",
+          curso: String(curso).trim() || null,
         }
       })
       .filter((s) => s.nombre && s.apellido && s.rut)
@@ -80,7 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "No se encontraron datos válidos. Verifique que el archivo tenga columnas: Nombre, Apellido, RUT, Regimen",
+            "No se encontraron datos válidos. Verifique que el archivo tenga columnas: Nombre, Apellido, RUT, Regimen, Curso",
         },
         { status: 400 }
       )

@@ -10,6 +10,7 @@ interface Student {
   apellido: string
   rut: string
   regimen: string
+  curso?: string
   tardies_today: number
   tardies_month: number
   tardies_semester: number
@@ -155,9 +156,9 @@ export function RutSearch({ onTardyRegistered }: RutSearchProps) {
                 <p className="font-bold text-foreground">
                   {student.nombre} {student.apellido}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   <span
-                    className={`mr-2 inline-block rounded-full border px-2.5 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide ${
+                    className={`inline-block rounded-full border px-2.5 py-0.5 text-[0.68rem] font-bold uppercase tracking-wide ${
                       student.regimen === "I"
                         ? "border-internal/30 bg-internal/15 text-internal"
                         : "border-external/30 bg-external/15 text-external"
@@ -165,7 +166,12 @@ export function RutSearch({ onTardyRegistered }: RutSearchProps) {
                   >
                     {student.regimen === "I" ? "Interno" : "Externo"}
                   </span>
-                  {student.rut}
+                  {student.curso && (
+                    <span className="inline-block rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[0.68rem] font-bold text-primary">
+                      {student.curso}
+                    </span>
+                  )}
+                  <span className="font-mono">{student.rut}</span>
                 </p>
               </div>
               <div className="text-center">
