@@ -8,8 +8,8 @@ const _sora = Sora({ subsets: ["latin"], weight: ["300", "400", "600", "700", "8
 const _jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "600"] })
 
 export const metadata: Metadata = {
-  title: 'Control de Atrasos',
-  description: 'Sistema de control de atrasos para establecimientos educacionales',
+  title: 'Control de Atrasos - Liceo Bicentenario Industrial Ing. Ricardo Fenner Ruedi',
+  description: 'Sistema de control de atrasos - Liceo Bicentenario Industrial Ingeniero Ricardo Fenner Ruedi - SNA Educa La Unión',
   generator: 'v0.app',
 }
 
