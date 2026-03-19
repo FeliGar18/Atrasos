@@ -6,6 +6,7 @@ import { StatsCards } from "@/components/stats-cards"
 import { RutSearch } from "@/components/rut-search"
 import { TardyTable } from "@/components/tardy-table"
 import { AdminPanel } from "@/components/admin-panel"
+import { StudentManager } from "@/components/student-manager"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -78,11 +79,12 @@ export function Dashboard() {
           <div className="flex flex-col gap-5">
             <RutSearch onTardyRegistered={triggerRefresh} />
             <AdminPanel onDataChanged={triggerRefresh} refreshKey={refreshKey} />
+            <StudentManager onDataChanged={triggerRefresh} refreshKey={refreshKey} />
           </div>
 
           {/* Right Panel */}
           <div className="flex flex-col gap-5">
-            <TardyTable refreshKey={refreshKey} />
+            <TardyTable refreshKey={refreshKey} onRefresh={triggerRefresh} />
           </div>
         </div>
       </main>

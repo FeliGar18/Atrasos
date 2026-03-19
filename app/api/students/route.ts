@@ -89,6 +89,60 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data)
 }
 
+// CREATE new student
+export async function POST(request: NextRequest) {
+  const body = await request.json()
+  const { nombre, apellido, rut, regimen, curso } = body
+
+  if (!nombre || !apellido || !rut) {
+    return NextResponse.json(
+      { error: "Nombre, apellido y RUT son requeridos" },
+      { status: 400 }
+    )
+  }
+
+  const supabase = createAdminClient()
+
+  // Normalize RUT
+  let normalizedRut = rut.trim()
+  if (normalizedRut.includes("-")) {
+    normalizedRut = normalizedRut.split("-")[0]
+  }
+  normalizedRut = normalizedRut.replace(/[.\-\s]/g, "")
+
+  // Check if RUT already exists
+  const { data: existing } = await supabase
+    .from("students")
+    .select("id")
+    .eq("rut", normalizedRut)
+    .single()
+
+  if (existing) {
+    return NextResponse.json(
+      { error: "Ya existe un alumno con ese RUT" },
+      { status: 400 }
+    )
+  }
+
+  const { data, error } = await supabase
+    .from("students")
+    .insert({
+      nombre: nombre.trim(),
+      apellido: apellido.trim(),
+      rut: normalizedRut,
+      regimen: regimen?.toUpperCase() === "I" ? "I" : "E",
+      curso: curso?.trim() || null,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ message: "Alumno agregado", student: data })
+}
+
 export async function DELETE() {
   const supabase = createAdminClient()
 
