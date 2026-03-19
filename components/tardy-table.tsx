@@ -33,6 +33,8 @@ interface TardyTableProps {
 export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
   const [filterText, setFilterText] = useState("")
   const [filterRegimen, setFilterRegimen] = useState("all")
+  const [filterCurso, setFilterCurso] = useState("all")
+  const [filterTardyCount, setFilterTardyCount] = useState("all")
   const [filterPeriod, setFilterPeriod] = useState("today")
   const [selectedStudent, setSelectedStudent] = useState<StudentWithTardies | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
@@ -78,9 +80,26 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
     return Array.from(map.values())
   })()
 
+  // Extract unique courses for filter dropdown
+  const uniqueCursos = Array.from(
+    new Set(groupedStudents.map((s) => s.curso).filter(Boolean))
+  ).sort() as string[]
+
   // Filter
   const filtered = groupedStudents.filter((s) => {
+    // Filter by regimen
     if (filterRegimen !== "all" && s.regimen !== filterRegimen) return false
+    // Filter by curso
+    if (filterCurso !== "all" && s.curso !== filterCurso) return false
+    // Filter by tardy count
+    if (filterTardyCount !== "all") {
+      const count = s.tardies.length
+      if (filterTardyCount === "1" && count !== 1) return false
+      if (filterTardyCount === "2" && count !== 2) return false
+      if (filterTardyCount === "3+" && count < 3) return false
+      if (filterTardyCount === "5+" && count < 5) return false
+    }
+    // Filter by text search
     if (!filterText) return true
     const search = filterText.toLowerCase()
     const fullName = `${s.nombre} ${s.apellido}`.toLowerCase()
@@ -139,6 +158,18 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
             className="min-w-0 flex-1 rounded-lg border border-border bg-surface2 px-3.5 py-2.5 font-sans text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
           />
           <select
+            value={filterCurso}
+            onChange={(e) => setFilterCurso(e.target.value)}
+            className="rounded-lg border border-border bg-surface2 px-3.5 py-2.5 font-sans text-sm text-foreground outline-none focus:border-primary"
+          >
+            <option value="all">Todos los cursos</option>
+            {uniqueCursos.map((curso) => (
+              <option key={curso} value={curso}>
+                {curso}
+              </option>
+            ))}
+          </select>
+          <select
             value={filterRegimen}
             onChange={(e) => setFilterRegimen(e.target.value)}
             className="rounded-lg border border-border bg-surface2 px-3.5 py-2.5 font-sans text-sm text-foreground outline-none focus:border-primary"
@@ -146,6 +177,17 @@ export function TardyTable({ refreshKey, onRefresh }: TardyTableProps) {
             <option value="all">Todos</option>
             <option value="I">Internos</option>
             <option value="E">Externos</option>
+          </select>
+          <select
+            value={filterTardyCount}
+            onChange={(e) => setFilterTardyCount(e.target.value)}
+            className="rounded-lg border border-border bg-surface2 px-3.5 py-2.5 font-sans text-sm text-foreground outline-none focus:border-primary"
+          >
+            <option value="all">Cant. atrasos</option>
+            <option value="1">1 atraso</option>
+            <option value="2">2 atrasos</option>
+            <option value="3+">3+ atrasos</option>
+            <option value="5+">5+ atrasos</option>
           </select>
           <select
             value={filterPeriod}
