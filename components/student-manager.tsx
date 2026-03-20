@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 
 interface Student {
@@ -10,6 +10,64 @@ interface Student {
   rut: string
   regimen: string
   curso?: string
+}
+
+// Form input component - defined outside to prevent re-creation on each render
+function FormInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  required,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  required?: boolean
+}) {
+  return (
+    <div className="mb-4">
+      <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
+        {label} {required && <span className="text-destructive">*</span>}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-border bg-surface2 px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
+      />
+    </div>
+  )
+}
+
+// Modal component - defined outside to prevent re-creation on each render
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string
+  children: React.ReactNode
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div 
+        className="animate-modal-in w-[90%] max-w-[480px] rounded-2xl border border-border bg-card p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-5 text-lg font-bold text-foreground">{title}</h3>
+        {children}
+      </div>
+    </div>
+  )
 }
 
 interface StudentManagerProps {
@@ -39,11 +97,7 @@ export function StudentManager({ onDataChanged, refreshKey }: StudentManagerProp
   })
 
   // Load students
-  useEffect(() => {
-    loadStudents()
-  }, [refreshKey])
-
-  const loadStudents = async () => {
+  const loadStudents = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch("/api/students")
@@ -56,7 +110,12 @@ export function StudentManager({ onDataChanged, refreshKey }: StudentManagerProp
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  // Load on mount only (not on refreshKey to avoid disrupting forms)
+  useEffect(() => {
+    loadStudents()
+  }, [loadStudents])
 
   // Get unique courses
   const uniqueCursos = Array.from(
@@ -192,57 +251,6 @@ export function StudentManager({ onDataChanged, refreshKey }: StudentManagerProp
       toast.error("Error al generar backup")
     }
   }
-
-  // Form input component
-  const FormInput = ({
-    label,
-    value,
-    onChange,
-    placeholder,
-    required,
-  }: {
-    label: string
-    value: string
-    onChange: (v: string) => void
-    placeholder?: string
-    required?: boolean
-  }) => (
-    <div className="mb-4">
-      <label className="mb-1.5 block text-sm font-medium text-muted-foreground">
-        {label} {required && <span className="text-destructive">*</span>}
-      </label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-lg border border-border bg-surface2 px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary"
-      />
-    </div>
-  )
-
-  // Modal component
-  const Modal = ({
-    title,
-    children,
-    onClose,
-  }: {
-    title: string
-    children: React.ReactNode
-    onClose: () => void
-  }) => (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div className="animate-modal-in w-[90%] max-w-[480px] rounded-2xl border border-border bg-card p-6 shadow-xl">
-        <h3 className="mb-5 text-lg font-bold text-foreground">{title}</h3>
-        {children}
-      </div>
-    </div>
-  )
 
   return (
     <>

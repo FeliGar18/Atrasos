@@ -7,6 +7,7 @@ import { RutSearch } from "@/components/rut-search"
 import { TardyTable } from "@/components/tardy-table"
 import { AdminPanel } from "@/components/admin-panel"
 import { StudentManager } from "@/components/student-manager"
+import { ReportsPanel } from "@/components/reports-panel"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -85,6 +86,7 @@ export function Dashboard() {
           {/* Right Panel */}
           <div className="flex flex-col gap-5">
             <TardyTable refreshKey={refreshKey} onRefresh={triggerRefresh} />
+            <ReportsPanel refreshKey={refreshKey} />
           </div>
         </div>
       </main>
